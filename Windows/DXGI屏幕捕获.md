@@ -1,0 +1,6 @@
+DXGI屏幕捕获
+IDXGIOutputDuplication::GetFrameDirtyRects returns dirty regions, which are non-overlapping rectangles that indicate the areas of the desktop image that the operating system updated since you processed the previous desktop image.
+IDXGIOutputDuplication::GetFrameMoveRects returns move regions, which are rectangles of pixels in the desktop image that the operating system moved to another location within the same image. Each move region consists of a destination rectangle and a source point. The source point specifies the location from where the operating system copied the region and the destination rectangle specifies to where the operating system moved that region. Move regions are always non-stretched regions so the source is always the same size as the destination.
+
+IDXGIOutputDuplication：：GetFrameDirtyRects 返回脏区域，这些区域是非重叠矩形，指示自你处理上一个桌面映像以来操作系统更新的桌面映像区域。
+IDXGIOutputDuplication：：GetFrameMoveRects 返回移动区域，这些区域是桌面映像中操作系统移动到同一映像中另一个位置的像素矩形。 每个移动区域由一个目标矩形和一个源点组成。 源点指定操作系统从中复制区域的位置，目标矩形指定操作系统将该区域移动到的位置。 移动区域始终是非拉伸区域，因此源的大小始终与目标相同。
