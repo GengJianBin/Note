@@ -15,7 +15,10 @@ ninja -C out/Default
 2.1 window平台下文件名称过长问题
 git config --system core.longpaths true
 2.2 下载报错：
-WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" "https://chromium.googlesource.com/chromium/src/third_party" "C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-checkout\src\_gclient_third_party_803d3biw"' in C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-checkout failed; will retry after a short nap...
+WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" 
+"https://chromium.googlesource.com/chromium/src/third_party" 
+"C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-checkout\src\_gclient_third_party_803d3biw"' 
+in C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-checkout failed; will retry after a short nap...
 这是git的使用问题
 fetch --nohooks --no-history android
 gclient sync -D --no-history  //执行该命令就可以
@@ -41,7 +44,7 @@ git stash pop
 git reset --hard
 3.5 暂存本地修改
 git add *
-3.6 编译错误、
+3.6 编译错误
 错误信息： 
 C:\gengjianbin\workspace\code\openSource\gwebgrtc\chrome_webrtc\webrtc-checkout\src>gn gen out/Default
 ERROR at //build/config/compiler/BUILD.gn:1508:22: Script returned non-zero exit code.
@@ -67,5 +70,6 @@ FileNotFoundError: [Errno 2] No such file or directory: 'C:\\gengjianbin\\worksp
 解决办法：
 执行gclient sync
 
-总结：安装好deopt_tools python2环境后，直接按照步骤同步即可下载成功。如有错误按照上述问题可解决，window和mac下相同。
-第三方库容易下载失败，可单独下载同步（使用git丢弃更改，重新跟新代码）。
+总结：
+- 安装好deopt_tools python2环境后，直接按照步骤同步即可下载成功。如有错误按照上述问题可解决，window和mac下相同。
+- 第三方库容易下载失败，可单独下载同步（使用git丢弃更改，重新更新代码）。 ———— 在2023-11-16日三方库下载失败中已经验证过，先丢弃代码（需要先设置文件名最大长度），更新出问题的模块（本次下载失败的模块为libc++），再执行gclient sync -D --no-history 后下载成功，可生成工程，编译通过。
