@@ -126,7 +126,12 @@ git config --global depot-tools.allowGlobalGitConfig true
 - depot_tools不更新：设置DEPOT_TOOLS_UPDATE = 0
 - DEPOT_TOOLS_WIN_TOOLCHAIN=0
 
-4.4 执行 gn gen /out/Default报错
+4.4 设置DEPOT_TOOLS_UPDATE = 0 和 DEPOT_TOOLS_WIN_TOOLCHAIN=0后执行gn gen out/Default报错
+找不到LASTCHANGE.committime，确认python路径是否在PATH中的第一个，一般Windows中Appstore中的python会是第一个
+
+注意：4.1报错，通过4.2方式解决，4.2报错，通过4.3方式解决，4.3报错，通过4.4或4.5方式解决
+
+4.5 执行 gn gen /out/Default报错
 Traceback (most recent call last):
   File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\compute_build_timestamp.py", line 138, in <module>
     sys.exit(main())
@@ -150,9 +155,7 @@ See //build/config/BUILDCONFIG.gn:392:5: which caused the file to be included.
 
 解决办法：更新代码 gclient sync
 
-注意：4.1报错，通过4.2方式解决，4.2报错，通过4.3方式解决，4.3报错，通过4.4方式解决
-
-4.5 执行 gn gen /out/Default报错
+4.6 执行 gn gen /out/Default报错
 错误信息： 
 C:\gengjianbin\workspace\code\openSource\gwebgrtc\chrome_webrtc\webrtc-checkout\src>gn gen out/Default
 ERROR at //build/config/compiler/BUILD.gn:1508:22: Script returned non-zero exit code.
