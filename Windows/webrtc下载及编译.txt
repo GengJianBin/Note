@@ -44,7 +44,115 @@ git stash pop
 git reset --hard
 3.5 暂存本地修改
 git add *
-3.6 编译错误
+
+四、生成工程错误
+4.1 gn gen out/Default 生成工程错误
+Toolchain is out of date. Run "gclient runhooks" to update the toolchain, or set DEPOT_TOOLS_WIN_TOOLCHAIN=0 to use the locally installed toolchain.
+Note: DEPOT_TOOLS_WIN_TOOLCHAIN=0 does not work with remote execution.
+Traceback (most recent call last):
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\vs_toolchain.py", line 656, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\vs_toolchain.py", line 652, in main
+    return commands[sys.argv[1]](*sys.argv[2:])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\vs_toolchain.py", line 618, in GetToolchainDir
+    runtime_dll_dirs = SetEnvironmentAndGetRuntimeDllDirs()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\vs_toolchain.py", line 111, in SetEnvironmentAndGetRuntimeDllDirs
+    update_result = Update(no_download=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\vs_toolchain.py", line 553, in Update
+    subprocess.check_call(get_toolchain_args)
+  File "C:\Users\13684\AppData\Local\vpython-root.0\store\cpython+gdee0q11ohi0s4eqh0uqprvov4\contents\bin\Lib\subprocess.py", line 413, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command '['C:\\Users\\13684\\AppData\\Local\\vpython-root.0\\store\\python_venv-beaoibbfdu9519ag5lffgvlsfc\\contents\\Scripts\\python3.exe', 'C:\\Workspace\\openSource\\webrtc\\webrtc-checkout\\src\\third_party\\depot_tools\\win_toolchain\\get_toolchain_if_necessary.py', '--output-json', 'C:\\Workspace\\openSource\\webrtc\\webrtc-checkout\\src\\build\\win_toolchain.json', '68a20d6dee', '--no-download']' returned non-zero exit status 1.
+ERROR at //build/config/win/visual_studio_version.gni:29:7: Script returned non-zero exit code.
+      exec_script("../../vs_toolchain.py", [ "get_toolchain_dir" ], "scope")
+      ^----------
+Current dir: C:/Workspace/openSource/webrtc/webrtc-checkout/src/out/Default/
+Command: C:/Users/13684/AppData/Local/vpython-root.0/store/python_venv-beaoibbfdu9519ag5lffgvlsfc/contents/Scripts/python3.exe C:/Workspace/openSource/webrtc/webrtc-checkout/src/build/vs_toolchain.py get_toolchain_dir
+Returned 1.
+See //build/gn_logs.gni:42:3: whence it was imported.
+  import("//build/config/win/visual_studio_version.gni")
+  ^----------------------------------------------------
+See //BUILD.gn:841:3: whence it was imported.
+  import("//build/gn_logs.gni")
+  ^---------------------------
+解决办法：gclient runhooks
+
+4.2 gclient runhooks错误
+Updating depot_tools...
+fatal: unable to read config file 'C:/Users/13684/.gitconfig': No such file or directory
+WARNING:root:Failed to read your global Git config:
+Command '['C:\\Workspace\\tools\\depot_tools\\depot_tools\\git.bat', 'config', '--list', '--global', '-z']' returned non-zero exit status 128.
+
+WARNING:root:depot_tools recommends setting the following for
+optimal Chromium development:
+
+$ git config --global core.autocrlf false
+$ git config --global core.filemode false
+$ git config --global core.fscache true
+$ git config --global core.preloadindex true
+
+You can silence this message by setting these recommended values.
+
+You can allow depot_tools to automatically update your global
+Git config to recommended settings by running:
+$ git config --global depot-tools.allowGlobalGitConfig true
+
+To suppress this warning and silence future recommendations, run:
+$ git config --global depot-tools.allowGlobalGitConfig false
+Error: Command 'python3 src/build/landmines.py --landmine-scripts src/tools_webrtc/get_landmines.py --src-dir src' returned non-zero exit status 9009 in C:\Workspace\openSource\webrtc\webrtc-checkout
+解决办法：
+在目录C:\Users\13684下生成.gitconfig全局配置
+# 首先确保Git已正确安装并添加到系统PATH
+git --version  # 检查Git是否可用
+
+# 创建并配置全局Git配置
+git config --global user.name "gengjianbin"  # 替换为你的名称
+git config --global user.email "13684522822@163.com"  # 替换为你的邮箱
+
+# 设置depot_tools推荐的Git配置
+git config --global core.autocrlf false
+git config --global core.filemode false
+git config --global core.fscache true
+git config --global core.preloadindex true
+
+# 允许depot_tools自动使用全局配置（可选，用于消除警告）
+git config --global depot-tools.allowGlobalGitConfig true
+
+4.3 如无工具链可更新
+- depot_tools不更新：设置DEPOT_TOOLS_UPDATE = 0
+- DEPOT_TOOLS_WIN_TOOLCHAIN=0
+
+4.4 执行 gn gen /out/Default报错
+Traceback (most recent call last):
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\compute_build_timestamp.py", line 138, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\compute_build_timestamp.py", line 111, in main
+    last_commit_timestamp = int(open(lastchange_file).read())
+                                ^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Workspace\\openSource\\webrtc\\webrtc-checkout\\src\\build\\util\\LASTCHANGE.committime'
+ERROR at //build/timestamp.gni:43:19: Script returned non-zero exit code.
+build_timestamp = exec_script(compute_build_timestamp,
+                  ^----------
+Current dir: C:/Workspace/openSource/webrtc/webrtc-checkout/src/out/Default/
+Command: C:/Users/13684/AppData/Local/vpython-root.0/store/python_venv-beaoibbfdu9519ag5lffgvlsfc/contents/Scripts/python3.exe C:/Workspace/openSource/webrtc/webrtc-checkout/src/build/compute_build_timestamp.py default
+Returned 1.
+See //build/config/win/BUILD.gn:13:1: whence it was imported.
+import("//build/timestamp.gni")
+^-----------------------------
+See //build/config/BUILDCONFIG.gn:392:5: which caused the file to be included.
+    "//build/config/win:default_crt",
+    ^-------------------------------
+
+解决办法：更新代码 gclient sync
+
+注意：4.1报错，通过4.2方式解决，4.2报错，通过4.3方式解决，4.3报错，通过4.4方式解决
+
+4.5 执行 gn gen /out/Default报错
 错误信息： 
 C:\gengjianbin\workspace\code\openSource\gwebgrtc\chrome_webrtc\webrtc-checkout\src>gn gen out/Default
 ERROR at //build/config/compiler/BUILD.gn:1508:22: Script returned non-zero exit code.
