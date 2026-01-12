@@ -1,52 +1,63 @@
-一、webrtc下载及编译
-参考链接：https://webrtc.github.io/webrtc-org/native-code/development/
-1.下载命令
+# 一、webrtc下载及编译
+[参考链接](https://webrtc.github.io/webrtc-org/native-code/development/)
+## 1.1 下载命令
+```cmd
 mkdir webrtc-checkout
 cd webrtc-checkout
 fetch --nohooks webrtc
 gclient sync
-2.生成工程文件
+```
+## 1.2 生成工程文件
+``` cmd
 gn gen out/Default
 gn gen out/vs_release_x64 --ide=vs2022 --args="is_debug=false target_cpu=\"x64\""
-3.编译命令
-ninja -C out/Default
+```
+## 1.3 编译命令
+` ninja -C out/Default `
 
-二、下载源码遇到的问题
-2.1 window平台下文件名称过长问题
-git config --system core.longpaths true
-2.2 下载报错：
+# 二、下载源码遇到的问题
+## 2.1 window平台下文件名称过长问题
+`git config --system core.longpaths true`
+## 2.2 下载报错：
+```cmd
 WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" 
 "https://chromium.googlesource.com/chromium/src/third_party" 
 "C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-checkout\src\_gclient_third_party_803d3biw"' 
 in C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-checkout failed; will retry after a short nap...
+```
 这是git的使用问题
+```cmd
 fetch --nohooks --no-history android
 gclient sync -D --no-history  //执行该命令就可以
-2.3 下载代码报错：
+```
+## 2.3 下载代码报错：
+```cmd
 错误信息：our local changes to the following files would be overwritten by merge:
 git reset --hard
-2.4 下载第三方库失败
+```
+## 2.4 下载第三方库失败
 错误信息：
 
 
-三、git命令的使用
-3.1 拉代码
-git pull origin 当前分支名
-3.2 查看当前分支 
-git branch -a
-3.2 查看当前分支状态
-git status
-3.3 保存当前分支的修改
-git stash
-3.3 恢复之前保存的修改
-git stash pop
-3.4 放弃本地修改，直接覆盖
-git reset --hard
-3.5 暂存本地修改
-git add *
+# 三、git命令的使用
+## 3.1 拉代码
+`git pul origin 当前分支名`
+## 3.2 查看当前分支 
+`git branch -a`
+## 3.2 查看当前分支状态
+`git status`
+## 3.3 保存当前分支的修改
+`git stash`
+## 3.4 恢复之前保存的修改
+`git stash pop`
+## 3.5 放弃本地修改，直接覆盖
+`git reset --hard`
+## 3.6 暂存本地修改
+`git add *`
 
-四、生成工程错误
-4.1 gn gen out/Default 生成工程错误
+# 四、生成工程错误
+# 4.1 gn gen out/Default 生成工程错误
+```cmd
 Toolchain is out of date. Run "gclient runhooks" to update the toolchain, or set DEPOT_TOOLS_WIN_TOOLCHAIN=0 to use the locally installed toolchain.
 Note: DEPOT_TOOLS_WIN_TOOLCHAIN=0 does not work with remote execution.
 Traceback (most recent call last):
@@ -79,9 +90,11 @@ See //build/gn_logs.gni:42:3: whence it was imported.
 See //BUILD.gn:841:3: whence it was imported.
   import("//build/gn_logs.gni")
   ^---------------------------
+```
 解决办法：gclient runhooks
 
-4.2 gclient runhooks错误
+## 4.2 gclient runhooks错误
+```cmd
 Updating depot_tools...
 fatal: unable to read config file 'C:/Users/13684/.gitconfig': No such file or directory
 WARNING:root:Failed to read your global Git config:
@@ -104,34 +117,38 @@ $ git config --global depot-tools.allowGlobalGitConfig true
 To suppress this warning and silence future recommendations, run:
 $ git config --global depot-tools.allowGlobalGitConfig false
 Error: Command 'python3 src/build/landmines.py --landmine-scripts src/tools_webrtc/get_landmines.py --src-dir src' returned non-zero exit status 9009 in C:\Workspace\openSource\webrtc\webrtc-checkout
+```
 解决办法：
 在目录C:\Users\13684下生成.gitconfig全局配置
-# 首先确保Git已正确安装并添加到系统PATH
-git --version  # 检查Git是否可用
+- 首先确保Git已正确安装并添加到系统PATH
+`git --version  # 检查Git是否可用`
 
-# 创建并配置全局Git配置
+- 创建并配置全局Git配置
+```cmd
 git config --global user.name "gengjianbin"  # 替换为你的名称
 git config --global user.email "13684522822@163.com"  # 替换为你的邮箱
-
-# 设置depot_tools推荐的Git配置
+```
+- 设置depot_tools推荐的Git配置
+```cmd
 git config --global core.autocrlf false
 git config --global core.filemode false
 git config --global core.fscache true
 git config --global core.preloadindex true
+```
+- 允许depot_tools自动使用全局配置（可选，用于消除警告）
+`git config --global depot-tools.allowGlobalGitConfig true`
 
-# 允许depot_tools自动使用全局配置（可选，用于消除警告）
-git config --global depot-tools.allowGlobalGitConfig true
-
-4.3 如无工具链可更新
+## 4.3 如无工具链可更新
 - depot_tools不更新：设置DEPOT_TOOLS_UPDATE = 0
 - DEPOT_TOOLS_WIN_TOOLCHAIN=0
 
-4.4 设置DEPOT_TOOLS_UPDATE = 0 和 DEPOT_TOOLS_WIN_TOOLCHAIN=0后执行gn gen out/Default报错
+## 4.4 设置DEPOT_TOOLS_UPDATE = 0 和 DEPOT_TOOLS_WIN_TOOLCHAIN=0后执行gn gen out/Default报错
 找不到LASTCHANGE.committime，确认python路径是否在PATH中的第一个，一般Windows中Appstore中的python会是第一个
 
 注意：4.1报错，通过4.2方式解决，4.2报错，通过4.3方式解决，4.3报错，通过4.4或4.5方式解决
 
-4.5 执行 gn gen /out/Default报错
+## 4.5 执行 gn gen /out/Default报错
+```cmd
 Traceback (most recent call last):
   File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\compute_build_timestamp.py", line 138, in <module>
     sys.exit(main())
@@ -152,11 +169,12 @@ import("//build/timestamp.gni")
 See //build/config/BUILDCONFIG.gn:392:5: which caused the file to be included.
     "//build/config/win:default_crt",
     ^-------------------------------
-
+```
 解决办法：更新代码 gclient sync
 
-4.6 执行 gn gen /out/Default报错
-错误信息： 
+## 4.6 执行 gn gen /out/Default报错
+错误信息：
+```cmd 
 C:\gengjianbin\workspace\code\openSource\gwebgrtc\chrome_webrtc\webrtc-checkout\src>gn gen out/Default
 ERROR at //build/config/compiler/BUILD.gn:1508:22: Script returned non-zero exit code.
     clang_revision = exec_script("//tools/clang/scripts/update.py",
@@ -177,10 +195,10 @@ Traceback (most recent call last):
   File "C:/gengjianbin/workspace/code/openSource/gwebgrtc/chrome_webrtc/webrtc-checkout/src/build/compute_build_timestamp.py", line 111, in main
     last_commit_timestamp = int(open(lastchange_file).read())
 FileNotFoundError: [Errno 2] No such file or directory: 'C:\\gengjianbin\\workspace\\code\\openSource\\gwebgrtc\\chrome_webrtc\\webrtc-checkout\\src\\build\\util\\LASTCHANGE.committime'
-
+```
 解决办法：
 执行gclient sync
 
-总结：
+## 总结：
 - 安装好deopt_tools python2环境后，直接按照步骤同步即可下载成功。如有错误按照上述问题可解决，window和mac下相同。
 - 第三方库容易下载失败，可单独下载同步（使用git丢弃更改，重新更新代码）。 ———— 在2023-11-16日三方库下载失败中已经验证过，先丢弃代码（需要先设置文件名最大长度），更新出问题的模块（本次下载失败的模块为libc++），再执行gclient sync -D --no-history 后下载成功，可生成工程，编译通过。
