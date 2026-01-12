@@ -199,6 +199,19 @@ FileNotFoundError: [Errno 2] No such file or directory: 'C:\\gengjianbin\\worksp
 解决办法：
 执行gclient sync
 
+# 五、webrtc 更新代码
+- 不覆盖更新
+假设src/third_party目录存在已修改未提交的文件
+```cmd 
+cd src/third_party
+git stash
+cd ../..
+gclient sync --with_branch_heads --with_tags
+cd src/third_party
+git stash pop
+```
+- 强制覆盖更新
+`gclient sync -f --with_branch_heads --with_tags`
 ## 总结：
 - 安装好deopt_tools python2环境后，直接按照步骤同步即可下载成功。如有错误按照上述问题可解决，window和mac下相同。
 - 第三方库容易下载失败，可单独下载同步（使用git丢弃更改，重新更新代码）。 ———— 在2023-11-16日三方库下载失败中已经验证过，先丢弃代码（需要先设置文件名最大长度），更新出问题的模块（本次下载失败的模块为libc++），再执行gclient sync -D --no-history 后下载成功，可生成工程，编译通过。
