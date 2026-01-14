@@ -1,24 +1,28 @@
 # 一、webrtc下载及编译
+## 1.1 Windows平台
 [参考链接](https://webrtc.github.io/webrtc-org/native-code/development/)
-## 1.1 下载命令
+
+### 1.1.1 下载命令
 ```cmd
 mkdir webrtc-checkout
 cd webrtc-checkout
 fetch --nohooks webrtc
 gclient sync
 ```
-## 1.2 生成工程文件
+
+### 1.1.2 生成工程文件
 ``` cmd
 gn gen out/Default
 gn gen out/vs_release_x64 --ide=vs2022 --args="is_debug=false target_cpu=\"x64\""
 ```
-## 1.3 编译命令
+
+### 1.1.3 编译命令
 ` ninja -C out/Default `
 
-# 二、下载源码遇到的问题
-## 2.1 window平台下文件名称过长问题
+### 1.1.4下载源码遇到的问题
+#### 1.1.4.1 window平台下文件名称过长问题
 `git config --system core.longpaths true`
-## 2.2 下载报错：
+#### 1.1.4.2 下载报错：
 ```cmd
 WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" 
 "https://chromium.googlesource.com/chromium/src/third_party" 
@@ -30,33 +34,31 @@ in C:\gengjianbin\workspace\code\openSource\gwebgrtc\webrtc_20230527\webrtc-chec
 fetch --nohooks --no-history android
 gclient sync -D --no-history  //执行该命令就可以
 ```
-## 2.3 下载代码报错：
+#### 1.1.4.3 下载代码报错：
 ```cmd
 错误信息：our local changes to the following files would be overwritten by merge:
 git reset --hard
 ```
-## 2.4 下载第三方库失败
+#### 1.1.4.4 下载第三方库失败
 错误信息：
-
-
-# 三、git命令的使用
-## 3.1 拉代码
+#### 1.1.4.5 git命令的使用
+- 拉代码
 `git pul origin 当前分支名`
-## 3.2 查看当前分支 
+- 查看当前分支 
 `git branch -a`
-## 3.2 查看当前分支状态
+- 查看当前分支状态
 `git status`
-## 3.3 保存当前分支的修改
+- 保存当前分支的修改
 `git stash`
-## 3.4 恢复之前保存的修改
+- 恢复之前保存的修改
 `git stash pop`
-## 3.5 放弃本地修改，直接覆盖
+- 放弃本地修改，直接覆盖
 `git reset --hard`
-## 3.6 暂存本地修改
+- 暂存本地修改
 `git add *`
 
-# 四、生成工程错误
-# 4.1 gn gen out/Default 生成工程错误
+### 1.1.5 生成工程错误
+#### 1.1.5.1 gn gen out/Default 生成工程错误
 ```cmd
 Toolchain is out of date. Run "gclient runhooks" to update the toolchain, or set DEPOT_TOOLS_WIN_TOOLCHAIN=0 to use the locally installed toolchain.
 Note: DEPOT_TOOLS_WIN_TOOLCHAIN=0 does not work with remote execution.
@@ -93,7 +95,7 @@ See //BUILD.gn:841:3: whence it was imported.
 ```
 解决办法：gclient runhooks
 
-## 4.2 gclient runhooks错误
+#### 1.1.5.2 gclient runhooks错误
 ```cmd
 Updating depot_tools...
 fatal: unable to read config file 'C:/Users/13684/.gitconfig': No such file or directory
@@ -138,16 +140,16 @@ git config --global core.preloadindex true
 - 允许depot_tools自动使用全局配置（可选，用于消除警告）
 `git config --global depot-tools.allowGlobalGitConfig true`
 
-## 4.3 如无工具链可更新
+#### 1.1.5.3 如无工具链可更新
 - depot_tools不更新：设置DEPOT_TOOLS_UPDATE = 0
 - DEPOT_TOOLS_WIN_TOOLCHAIN=0
 
-## 4.4 设置DEPOT_TOOLS_UPDATE = 0 和 DEPOT_TOOLS_WIN_TOOLCHAIN=0后执行gn gen out/Default报错
+#### 1.1.5.4 设置DEPOT_TOOLS_UPDATE = 0 和 DEPOT_TOOLS_WIN_TOOLCHAIN=0后执行gn gen out/Default报错
 找不到LASTCHANGE.committime，确认python路径是否在PATH中的第一个，一般Windows中Appstore中的python会是第一个
 
 注意：4.1报错，通过4.2方式解决，4.2报错，通过4.3方式解决，4.3报错，通过4.4或4.5方式解决
 
-## 4.5 执行 gn gen /out/Default报错
+#### 1.1.5.5 执行 gn gen /out/Default报错
 ```cmd
 Traceback (most recent call last):
   File "C:\Workspace\openSource\webrtc\webrtc-checkout\src\build\compute_build_timestamp.py", line 138, in <module>
@@ -172,7 +174,7 @@ See //build/config/BUILDCONFIG.gn:392:5: which caused the file to be included.
 ```
 解决办法：更新代码 gclient sync
 
-## 4.6 执行 gn gen /out/Default报错
+#### 1.1.5.6 执行 gn gen /out/Default报错
 错误信息：
 ```cmd 
 C:\gengjianbin\workspace\code\openSource\gwebgrtc\chrome_webrtc\webrtc-checkout\src>gn gen out/Default
@@ -199,7 +201,7 @@ FileNotFoundError: [Errno 2] No such file or directory: 'C:\\gengjianbin\\worksp
 解决办法：
 执行gclient sync
 
-# 五、webrtc 更新代码
+### 1.1.6 webrtc 更新代码
 - 不覆盖更新
 假设src/third_party目录存在已修改未提交的文件
 ```cmd 
@@ -212,6 +214,106 @@ git stash pop
 ```
 - 强制覆盖更新
 `gclient sync -f --with_branch_heads --with_tags`
-## 总结：
+
+### 1.1.7 总结：
 - 安装好deopt_tools python2环境后，直接按照步骤同步即可下载成功。如有错误按照上述问题可解决，window和mac下相同。
 - 第三方库容易下载失败，可单独下载同步（使用git丢弃更改，重新更新代码）。 ———— 在2023-11-16日三方库下载失败中已经验证过，先丢弃代码（需要先设置文件名最大长度），更新出问题的模块（本次下载失败的模块为libc++），再执行gclient sync -D --no-history 后下载成功，可生成工程，编译通过。
+
+## 1.2 Linux平台
+### 1.2.1 depot_tools 安装
+- 下载 `git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git`
+- 设置环境变量(使用pyenv管理python时,depot_tools添加的环境变量，应该位于pyenv的环境变量之后)
+```bash
+# 若使用bash（绝大多数Linux默认）
+echo 'export PATH="$PATH:~/tools/depot_tools"' >> ~/.bashrc
+
+# 若使用zsh（如Oh My Zsh）
+echo 'export PATH="$PATH:~/tools/depot_tools"' >> ~/.zshrc
+
+# 生效配置（无需重启终端）
+source ~/.bashrc  # bash用户
+# 或 source ~/.zshrc  # zsh用户
+```
+
+### 1.2.2 将depot_tools中的python添加到pyenv中管理
+```bash
+# 1.创建软连接
+# 软链接depot_tools的Python到该目录
+ln -s ~/Workspace/tools/depot_tools/ ~/.pyenv/versions/3.10.12-python3-rtc
+
+# 2.取消软连接
+# 先确认目录存在（避免删错）
+ls -l ~/.pyenv/versions/3.10.12-rtc
+
+# 删除该版本目录（软链接和目录一起删除）
+rm -rf ~/.pyenv/versions/3.10.12-rtc
+
+# 验证是否删除成功（无输出即删除完成）
+ls ~/.pyenv/versions/3.10.12-rtc
+```
+
+### 1.2.3 下载rtc代码
+```bash
+mkdir webrtc-checkout
+cd webrtc-checkout
+fetch --nohooks webrtc
+gclient sync
+```
+若使用的时WSL,并且已经将pyenv-win添加到了Windows的PATH中，需要禁止启动WSL时将Windows的环境变量添加到WSL的及环境变量中，防止pyenv-win中的fetch中的回车换行和Linux中不一致而报错。
+```bash
+# 一、禁止WSL加载Windows系统的PATH变量
+# 1.编辑 WSL 的配置文件 /etc/wsl.conf（没有则创建）：
+sudo vim /etc/wsl.conf
+# 2. 添加以下内容：
+[interop]
+appendWindowsPath = false
+# 3.关闭 WSL 终端，在 Windows 的 cmd 中执行以下命令重启 WSL(必须在Windows cmd中执行以下命令后在重启WSL，直接关闭WSL后再重新打开不生效)：
+wsl --shutdown
+
+二、去除WSL中PATH中设置错误的路径
+# 4.搜索.bashrc中包含~/tools/depot_tools的行（bash用户）
+grep -n '~/tools/depot_tools' ~/.bashrc
+# 5.如果步骤4失败，则搜索所有用户配置文件
+grep -r '~/tools/depot_tools' ~/
+# 验证当前PATH中无~，且depot_tools路径仅出现一次
+echo $PATH | tr ':' '\n' | grep depot_tools
+# 匹配错误路径特征，删除对应行（转义必要的特殊字符）
+sed -i '/export PATH="\$PATH:\~\/tools\/depot_tools"/d' ~/.bash_history
+# vi中清空文件
+命令模式下输入%d
+
+```
+### 1.2.4 编译
+```bash
+# 基础编译（Debug版，x86_64，默认功能）
+gn gen out/Default --args='
+target_os="linux"
+target_cpu="x64"
+is_debug=true  # true=Debug版（调试用），false=Release版（发布用）
+is_component_build=false  # 静态编译（生成单个库）
+rtc_use_h264=true  # 启用H264（需系统有openh264依赖）
+use_rtti=true  # 启用RTTI（调试方便）
+enable_libaom=true  # 启用AV1编码
+'
+# 精简版（Release版，仅核心功能，体积更小）
+gn gen out/Release --args='
+target_os="linux"
+target_cpu="x64"
+is_debug=false
+is_component_build=false
+rtc_use_h264=true
+rtc_include_tests=false  # 关闭测试代码
+rtc_enable_simulcast=true  # 启用 simulcast
+'
+```
+### 1.2.5 执行编译
+```bash
+# 编译所有目标（耗时久，适合首次编译）
+ninja -C out/Default  # 对应gn gen的目录（out/Default）
+
+# 仅编译核心库（rtc_base + peerconnection，加快速度）
+ninja -C out/Default webrtc
+
+# 仅编译示例程序（如peerconnection_client/server）
+ninja -C out/Default peerconnection_client peerconnection_server
+```
