@@ -17,3 +17,6 @@ AMENT_PREFIX_PATH 环境变量的默认值为ROS2系统的安装目录
 
 # 七、查看接口
 ros2 interface show example_interfaces/msg/String
+
+# 八、运行
+执行 ros2 run 报名 python_node ，其中python_node 为在setup.py中指定的
