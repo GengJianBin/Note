@@ -20,3 +20,26 @@ ros2 interface show example_interfaces/msg/String
 
 # 八、运行
 执行 ros2 run 报名 python_node ，其中python_node 为在setup.py中指定的
+
+# 九、cpp开发流程
+- 切换到工作空间的src目录下： 
+```bash
+ros2 pkg create demo_cpp_topic --build-type ament_cmake --dependencies rclcpp geometry turtlesim --license Apach-2.0
+```
+
+- 切换到功能包下的src目录创建源文件
+- 修改CMakeList.txt文件
+```txt
+add_executable(turtle_circle src/turtle_circle.cpp)
+ament_target_dependencies(turtle_circle rclcpp geometry_msgs)
+install(TARGETS turtle_circle DESTINATION lib/${PROJECT_NAME})
+```
+- 运行海龟模拟器
+```bash
+ros2 run turtlesim turtlesim_node
+```
+- 运行节点
+```bash
+ros2 run demo_cpp_topic turtle_circle
+```
+注意：注意话题发布的名称，要写对
