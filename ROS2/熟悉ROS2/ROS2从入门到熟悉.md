@@ -6,62 +6,60 @@
 - 前置基础：Linux 操作、C++ 基础（rclcpp 为主）、CMake 基础；懂一点点 Git 更佳
 - 整体周期：每天 2～3 小时，2.5～3 个月可达到 “熟悉” 水平
 
-### 阶段 0 前置准备（1 周）
-
-1.Ubuntu 基础
-2.常用命令：进程查看、权限、ssh、环境变量、软链接
-3.学会 vim/nano、进程 htop、网络排查
-4.C++ 基础夯实
-5.智能指针、类、回调函数、std::thread、chrono 时间
-6.工具安装
-7.搭建 ROS2（推荐先 Humable，有余力再装 Jazzy）
-8.Gazebo / Ignition 仿真环境
+### 阶段 0 前置准备（1 周） 
+1. Ubuntu 基础
+  - 常用命令：进程查看、权限、ssh、环境变量、软链接
+  - 学会 vim/nano、进程 htop、网络排查
+2. C++ 基础夯实
+  - 智能指针、类、回调函数、std::thread、chrono 时间
+3. 工具安装
+  - 搭建 ROS2（推荐先 Humable，有余力再装 Jazzy）
+  - Gazebo / Ignition 仿真环境
 
 ### 阶段 1 ROS2 基础概念 + 最小节点开发（2～3 周｜核心分水岭）
-
 - 学习目标：告别复制粘贴 demo，从零手写节点
-- 1.ROS2 核心架构理解
-- 2.无 Master、基于 DDS 分布式通信
-- 3.工作空间、src、package、ament_cmake
-- 4.四大通信机制（必须全部手写代码）
-- 5.Topic：发布 / 订阅（rclcpp）
-- 6.Service：同步请求响应
-- 7.Action：异步 + 反馈（重点！导航、机械臂高频）
-- 8.Parameter 参数系统，动态参数
-- 9.消息机制
-- 10.标准消息使用
-- 11.自定义 msg/srv/action，完整修改 CMakeLists & package.xml
-- 12.时间系统
-- 13.RCL 时钟、系统时钟、仿真时钟 use_sim_time
-- 14.Header.stamp 正确使用（90% 新手踩坑点）
-- 15.工具链熟练使用 bash、ros2 node、topic、service、param、bag、run、launch、rqt_graph、rqt_console、rqt_tf_tree、RViz2
+1. ROS2 核心架构理解
+  - 无 Master、基于 DDS 分布式通信
+2. 工作空间、src、package、ament_cmake
+3. 四大通信机制（必须全部手写代码）
+  - Topic：发布 / 订阅（rclcpp）
+  - Service：同步请求响应
+  - Action：异步 + 反馈（重点！导航、机械臂高频）
+  - Parameter 参数系统，动态参数
+4. 消息机制
+  - 标准消息使用
+  - 自定义 msg/srv/action，完整修改 CMakeLists & package.xml
+5. 时间系统
+  - RCL 时钟、系统时钟、仿真时钟 use_sim_time
+  - Header.stamp 正确使用（90% 新手踩坑点）
+6. 工具链熟练使用 bash、ros2 node、topic、service、param、bag、run、launch、rqt_graph、rqt_console、rqt_tf_tree、RViz2
 - ✅ 产出：自主编写一套发布订阅、服务、Action 双向通信 Demo
 
 ### 阶段 2 Launch 系统 + URDF/XACRO + TF2（3 周｜熟悉 ROS2 标志性模块）
 
 - 面试官重点考察板块，区分新手和熟练开发者
-- 1.ROS2 Launch（Python launch）
-- 2.启动多节点、传参、remap 重映射、namespace 命名空间
-- 3.条件启动、节点参数文件加载
-- 4.URDF / XACRO 机器人建模
-- 5.link、joint（固定 / 旋转 / 平移关节）
-- 6.惯性、碰撞、视觉属性
-- 7.相机、雷达传感器挂载
-- 8.TF2 坐标变换（重中之重）
-- 9.静态 TF、动态 TF 广播器、监听器
-- 10.tf2_ros::Buffer、坐标查询
-- 11.解决：TransformException、延时、坐标系不存在
-- 12.RViz2 可视化机器人模型、传感器数据、TF 树
-- ✅ 产出：搭建一个移动机器人 URDF 模型，正确发布基座、雷达、相机坐标系
+1. ROS2 Launch（Python launch）
+2. 启动多节点、传参、remap 重映射、namespace 命名空间
+3. 条件启动、节点参数文件加载
+4. URDF / XACRO 机器人建模
+5. link、joint（固定 / 旋转 / 平移关节）
+6. 惯性、碰撞、视觉属性
+7. 相机、雷达传感器挂载
+8. TF2 坐标变换（重中之重）
+9. 静态 TF、动态 TF 广播器、监听器
+10. tf2_ros::Buffer、坐标查询
+11. 解决：TransformException、延时、坐标系不存在
+12. RViz2 可视化机器人模型、传感器数据、TF 树
+✅ 产出：搭建一个移动机器人 URDF 模型，正确发布基座、雷达、相机坐标系
 
 ### 阶段 3 仿真环境 + 传感器驱动思想（2 周）
 
-- 1.Ignition/Gazebo 仿真
-- 2.机器人载入仿真世界、仿真时间开启
-- 3.获取激光雷达、IMU、相机仿真数据
-- 4.image_transport 图像传输、相机信息话题
-- 5.理解驱动开发范式：硬件数据 → ROS 话题封装
-- ✅ 产出：仿真机器人，雷达数据在 RViz 可视化
+1. Ignition/Gazebo 仿真
+2. 机器人载入仿真世界、仿真时间开启
+3. 获取激光雷达、IMU、相机仿真数据
+4. image_transport 图像传输、相机信息话题
+5. 理解驱动开发范式：硬件数据 → ROS 话题封装
+✅ 产出：仿真机器人，雷达数据在 RViz 可视化
 
 ### 阶段 4 机器人上层算法框架（任选一条路线深耕，建议二选一）【3～4 周】
 
@@ -77,22 +75,22 @@
 
 ### 阶段 5 工程能力、排错、分布式部署（2 周｜达到 “熟悉” 最后一关）
 
-- 1.ros2 bag：录制、回放、时间同步、离线复现 bug
-- 2.QoS 服务质量策略（面试高频！）
-- 3.Reliability、Durability、History 深度
-- 4.最常见问题：收发两端 QoS 不匹配收不到消息
-- 5.DDS 配置、多机通信，解决跨主机看不见节点
-- 6.组件节点 Component（零拷贝、多节点同一进程优化）
-- 7.LifecycleNode 生命周期节点（工业项目标配）
-- 8.工程规范：包依赖管理、CMake 优化、日志分级输出
-- 9.常见故障系统性排查方法论
+1. ros2 bag：录制、回放、时间同步、离线复现 bug
+2. QoS 服务质量策略（面试高频！）
+3. Reliability、Durability、History 深度
+4. 最常见问题：收发两端 QoS 不匹配收不到消息
+5. DDS 配置、多机通信，解决跨主机看不见节点
+6. 组件节点 Component（零拷贝、多节点同一进程优化）
+7. LifecycleNode 生命周期节点（工业项目标配）
+8. 工程规范：包依赖管理、CMake 优化、日志分级输出
+9. 常见故障系统性排查方法论
 
 ### 阶段 6 综合项目整合（持续练习）
 
 - 推荐项目（任选其一作为简历项目）
-- 1.仿真移动机器人：URDF + 雷达 + Nav2 自主导航避障
-- 2.机械臂仿真：URDF + MoveIt2 自主运动规划
-- 3.自研简易传感器融合节点（IMU + 里程计）
+1. 仿真移动机器人：URDF + 雷达 + Nav2 自主导航避障
+2. 机械臂仿真：URDF + MoveIt2 自主运动规划
+3. 自研简易传感器融合节点（IMU + 里程计）
 
 ## 第二部分：ROS2 面试复习提纲（可直接背诵、自测）
 
