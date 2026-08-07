@@ -2,7 +2,7 @@
 .SYNOPSIS
 Windows 配置Git SSH密钥 PowerShell脚本
 #>
-$gitEmail = "your_email@example.com"
+$gitEmail = "13684522822@163.com"
 $sshPath = "$env:USERPROFILE\.ssh"
 $keyFile = "$sshPath\id_ed25519"
 
@@ -33,6 +33,10 @@ Host gitee.com
 "@
 $configContent | Out-File "$sshPath\config" -Encoding utf8
 
-Write-Host "`n===== 你的公钥 ====="
+Write-Host "`n===== Your SSH Public Key ====="
 Get-Content "$keyFile.pub"
-Write-Host "`n测试命令：ssh -T git@github.com"
+Write-Host "`nRun: ssh -T git@github.com"
+
+Write-Host "===== Your SSH Public Key ====="
+Write-Host "===== Test GitHub SSH Connection ====="
+Write-Host "Run: ssh -T git@github.com"
