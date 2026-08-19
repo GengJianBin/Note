@@ -883,6 +883,400 @@ Qt所有UI控件非线程安全，仅主线程可操作界面。原生Qt线程�
 
 - 内存持续上涨优先排查：无托管对象、线程未释放、重复绑定信号槽。
 
+#### 2\.7 深度专题：Qt Model/View 架构（MVC 设计模式）完整原理与实战
+
+Model/View 架构是 Qt 框架中最核心的**数据\-界面分离设计体系**，是企业级桌面项目实现「海量数据高效渲染、界面与数据解耦、多视图共享同一数据源」的底层支撑，也是面试高频架构设计考点。很多开发者只知 QListWidget、QTableWidget 等便利控件，却不懂背后的 Model/View 体系，无法支撑中大型项目的数据展示需求。本节从 MVC 标准模式出发，深度拆解 Qt Model/View 架构的设计思想、三大核心组件、数据流转链路、工程实战写法与面试高频考点。
+
+##### 2\.7\.1 前置认知：什么是 MVC 设计模式（通用概念）
+
+MVC（Model\-View\-Controller）是软件工程中最经典的**架构设计模式**，核心思想是**将数据的存储管理、界面展示、用户交互逻辑三者分离**，实现各模块独立维护、低耦合协作，是所有 GUI 框架架构设计的理论基石。
+
+- **Model（模型）**：负责**数据存储与管理**，封装数据结构、增删改查逻辑、数据状态维护，完全独立于界面，不知道数据如何展示，只对外提供统一的数据访问接口。数据变化时通知依赖它的视图刷新。
+
+- **View（视图）**：负责**界面展示与渲染**，从 Model 获取数据并以可视化形式呈现给用户（表格、列表、树形等），自身不持有业务数据，仅负责「怎么画」，数据变了就重绘。
+
+- **Controller（控制器）**：负责**协调 Model 与 View 的交互逻辑**，监听用户操作（点击、输入、选择），解析用户意图，调用 Model 更新数据、指挥 View 刷新界面，是数据流的中枢调度者。
+
+**MVC 核心价值**：一个 Model 可同时驱动多个 View（同一份数据，表格视图、图表视图同时展示）；修改数据只需改 Model，所有关联视图自动同步刷新；界面逻辑与业务数据彻底解耦，可独立迭代、独立测试，大幅提升大型项目可维护性。
+
+##### 2\.7\.2 Qt 的 Model/View 架构：标准 MVC 的工程化变体
+
+Qt 并未生搬硬套标准 MVC 三件套，而是根据 GUI 开发实际痛点做了**工程化裁剪与优化**，形成了独特的「**Model \- View \- Delegate（代理）**」三组件架构，这也是面试中需要清晰区分的关键点。
+
+###### 2\.7\.2\.1 Qt 为什么不直接用标准 MVC？
+
+标准 MVC 的 Controller 在 GUI 框架中职责模糊——用户在界面上点击、输入、拖拽等交互行为，本质上由**事件系统**（鼠标事件、键盘事件）驱动，Qt 已有完善的事件循环与事件分发机制（参见 2\.4 节），无需再单独引入 Controller 层做交互调度。因此 Qt 将 Controller 的职责拆解：**用户交互由事件体系处理，数据编辑由 Delegate 负责**，精简了架构层级，降低了理解成本。
+
+###### 2\.7\.2\.2 Qt Model/View 三大核心组件
+
+| 组件 | 对应 MVC | 核心职责 | Qt 基类 |
+| --- | --- | --- | --- |
+| **Model（模型）** | Model | 管理数据结构、提供数据读写接口、通知视图数据变化 | QAbstractItemModel |
+| **View（视图）** | View | 从 Model 获取数据、负责界面渲染展示、处理用户选择与导航 | QAbstractItemView |
+| **Delegate（代理）** | Controller 的编辑部分 | 负责单个数据项的**绘制方式**与**编辑交互**，是 View 与 Model 之间的中间层 | QAbstractItemDelegate |
+
+- **Model（模型）**：Qt 的 Model 是数据的唯一权威来源（Single Source of Truth），管理二维数据网格（行 × 列）或树形层级数据，对外提供统一的 `data()、setData()、rowCount()、columnCount()` 等标准接口。Model 不知道 View 的存在，数据变更时通过 `dataChanged` 等信号广播通知所有关联 View 自动刷新。
+
+- **View（视图）**：View 是纯粹的展示层，不持有业务数据，仅通过 Model 提供的标准接口按需拉取数据进行渲染。View 负责滚动条、选择高亮、键盘导航等交互行为，但不负责数据项内部如何绘制、如何编辑——这部分交给 Delegate。
+
+- **Delegate（代理）**：Delegate 是 Qt 对标准 MVC 的独有扩展，负责**数据项级别的精细化控制**，核心两大职责：① **自定义绘制**——控制每个单元格怎么画（进度条单元格、图标单元格、富文本单元格）；② **自定义编辑**——控制用户双击编辑时弹出什么编辑器（下拉框、日期选择器、_spin 框）。Delegate 让开发者无需继承 View 即可定制数据项的展示与编辑行为，复用性极强。
+
+###### 2\.7\.2\.3 Qt Model/View 数据流转完整链路
+
+```
+用户操作 View（点击/输入/编辑）
+    → View 将编辑请求委托给 Delegate
+    → Delegate 提供编辑器，用户完成编辑
+    → Delegate 调用 Model.setData() 写入数据
+    → Model 内部更新数据，发射 dataChanged 信号
+    → 所有关联 View 接收信号，自动重新拉取数据并刷新界面
+```
+
+**核心设计精髓**：数据变更 → Model 信号广播 → View 自动刷新，全链路单向数据流，View 永远不直接修改数据，所有写操作必须经过 Model，保证数据一致性。多个 View 共享同一 Model 时，任何一处编辑，所有视图实时同步，无需手动刷新。
+
+##### 2\.7\.3 Qt 预置 Model 与 View 体系全览
+
+Qt 提供了完善的预置 Model 和 View 类，覆盖绝大多数业务场景，开发者可直接使用或继承扩展，无需从零实现。
+
+###### 2\.7\.3\.1 四大预置 View（视图类）
+
+| View 类 | 展示形态 | 典型场景 |
+| --- | --- | --- |
+| **QListView** | 单列列表 | 文件列表、消息列表、选项列表 |
+| **QTableView** | 二维表格 | 数据报表、配置表格、数据库结果展示 |
+| **QTreeView** | 树形层级 | 文件目录树、组织架构树、多级分类导航 |
+| **QColumnView** | 级联列（macOS Finder 风格） | 多层级级联浏览（如文件浏览器） |
+
+所有 View 均继承自 `QAbstractItemView`，共享统一的选择模型、编辑触发模式、滚动行为 API。
+
+###### 2\.7\.3\.2 四大预置 Model（模型类）
+
+| Model 类 | 数据来源 | 特点 |
+| --- | --- | --- |
+| **QStringListModel** | 字符串列表 | 最简单的列表模型，适合简单文本列表 |
+| **QFileSystemModel** | 文件系统 | 自动读取磁盘文件目录树，支持图标、大小、时间等元信息 |
+| **QStandardItemModel** | 通用内存模型 | 最灵活的通用模型，支持任意行列数据、树形层级，单元格级别独立控制样式/图标/编辑权限，企业开发最常用 |
+| **QSqlQueryModel / QSqlTableModel** | 数据库 | 直接绑定 SQL 查询结果或数据库表，自动同步数据库数据，适合数据库驱动型应用 |
+| **QAbstractItemModel**（自定义继承） | 任意数据源 | 面向超大数据量、特殊数据结构的终极方案，开发者继承重写核心虚函数，对接任意后端数据（网络数据、内存缓存、自定义结构），性能最优 |
+
+###### 2\.7\.3\.3 便利控件 vs Model/View 控件（面试高频对比）
+
+Qt 同时提供了两套控件，很多开发者混淆不清：
+
+| 对比维度 | 便利控件（QListWidget/QTableWidget/QTreeWidget） | Model/View 控件（QListView/QTableView/QTreeView \+ Model） |
+| --- | --- | --- |
+| 数据管理方式 | 控件内部自带数据存储（QListWidgetItem 等），数据与界面耦合 | 数据与界面完全分离，Model 管理数据，View 仅展示 |
+| 适用场景 | 小型工具、少量数据、快速原型 | 中大型项目、海量数据、多视图共享数据、复杂数据操作 |
+| 性能表现 | 数据量大时性能急剧下降（万级数据卡顿明显） | 支持懒加载、虚拟滚动，百万级数据流畅渲染 |
+| 灵活扩展性 | 继承改造困难，扩展性差 | Model 可自由扩展，支持自定义数据源、自定义 Delegate |
+| 多视图同步 | 无法实现一份数据多视图展示 | 一个 Model 可驱动多个 View，数据自动同步 |
+
+**面试标准话术**：便利控件是 Qt 为快速开发封装的「控件\+内置数据」一体化方案，适合小型工具和 Demo；Model/View 架构是 Qt 的标准数据展示体系，实现数据与界面解耦，支持海量数据高效渲染、多视图共享数据源、自定义绘制与编辑，是中大型项目必须采用的核心架构。
+
+##### 2\.7\.4 核心基类 QAbstractItemModel 深度解析（面试深挖）
+
+`QAbstractItemModel` 是 Qt 所有 Model 的终极基类，定义了 Model/View 体系的**数据访问标准协议**。无论是预置 Model 还是自定义 Model，底层均实现该基类定义的纯虚函数。理解该基类的核心接口，是掌握 Qt Model/View 架构的关键。
+
+###### 2\.7\.4\.1 必须重写的核心纯虚函数（自定义 Model 最少实现）
+
+```python
+class CustomModel(QAbstractItemModel):
+    def rowCount(self, parent=QModelIndex()):
+        """返回指定父节点下的行数（表格场景返回总行数）"""
+        ...
+
+    def columnCount(self, parent=QModelIndex()):
+        """返回列数（表格场景返回总列数）"""
+        ...
+
+    def data(self, index, role=Qt.DisplayRole):
+        """根据索引和角色返回对应数据，是 View 获取数据的核心入口"""
+        ...
+
+    def index(self, row, column, parent=QModelIndex()):
+        """根据行列创建并返回子项索引（树形模型必须实现）"""
+        ...
+
+    def parent(self, index):
+        """返回指定索引的父索引（树形模型必须实现，表格模型返回空索引）"""
+        ...
+```
+
+###### 2\.7\.4\.2 data\(\) 函数的 ItemDataRole 体系（核心考点）
+
+`data()` 函数是 View 获取数据的唯一入口，通过 **role（数据角色）** 参数区分不同用途的数据请求。Qt 定义了丰富的角色枚举，Model 按角色返回不同维度的数据：
+
+| 角色 | 作用 | 典型返回值 |
+| --- | --- | --- |
+| `Qt.DisplayRole` | 显示文本（默认角色） | 单元格展示的字符串 |
+| `Qt.EditRole` | 编辑时的初始值 | 双击编辑时编辑器中显示的数据 |
+| `Qt.DecorationRole` | 装饰图标 | 单元格左侧的 QIcon / QPixmap |
+| `Qt.TextAlignmentRole` | 文本对齐方式 | Qt.AlignCenter 等 |
+| `Qt.ForegroundRole` | 前景色（文字颜色） | QBrush(QColor("red")) |
+| `Qt.BackgroundRole` | 背景色 | QBrush(QColor("#f0f0f0")) |
+| `Qt.FontRole` | 字体 | QFont("微软雅黑", 12, QFont.Bold) |
+| `Qt.SizeHintRole` | 单元格尺寸建议 | QSize(120, 40) |
+| `Qt.ToolTipRole` | 悬浮提示文本 | 鼠标悬停时显示的说明文字 |
+| `Qt.CheckStateRole` | 勾选状态 | Qt.Checked / Qt.Unchecked |
+
+**核心机制**：View 在渲染每个单元格时，会**多次调用 data() 函数**，分别传入不同 role，Model 按角色返回对应数据。这意味着一个 Model 可以同时提供文本、颜色、图标、字体、对齐方式等全方位展示信息，View 根据这些信息完成完整渲染，实现了数据展示逻辑的高度集中化管理。
+
+###### 2\.7\.4\.3 数据变更通知机制（Model → View 信号广播）
+
+Model 数据变化后，必须主动通知 View 刷新，Qt 提供了三组核心信号函数：
+
+- **`dataChanged(topLeft, bottomRight)`**：指定区域数据已变更，View 自动重绘该区域单元格。用于更新已有数据。
+
+- **`beginInsertRows() / endInsertRows()`**：成对调用，通知 View 即将插入行 / 插入完成，View 自动更新行号、滚动条。用于新增数据行。
+
+- **`beginRemoveRows() / endRemoveRows()`**：成对调用，通知 View 即将删除行 / 删除完成。用于删除数据行。
+
+**核心规则**：所有数据增删改操作，必须通过上述信号函数通知 View，否则 View 不会自动刷新，界面数据与 Model 数据不一致，是自定义 Model 最高频踩坑点。
+
+##### 2\.7\.5 完整实战代码：QTableView \+ QStandardItemModel \+ 自定义 Delegate
+
+以下代码演示企业标准 Model/View 完整用法：表格展示任务列表，包含进度条单元格（自定义 Delegate 绘制）、状态颜色区分、双击编辑。
+
+```python
+from PySide6.QtWidgets import (
+    QApplication, QTableView, QStyledItemDelegate, QStyleOptionViewItem
+)
+from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtGui import QBrush, QColor, QPainter, QStandardItemModel, QStandardItem
+
+
+# ========== 1. 自定义 Delegate：进度条单元格绘制 ==========
+class ProgressBarDelegate(QStyledItemDelegate):
+    """在单元格内绘制进度条，替代默认文本展示"""
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        # 获取当前行的进度值（EditRole 返回 int）
+        progress = index.data(Qt.UserRole)  # 自定义角色存储进度值
+
+        if progress is not None:
+            painter.save()
+            # 绘制进度条背景区域
+            rect = option.rect.adjusted(4, 8, -4, -8)
+            painter.setBrush(QBrush(QColor("#e0e0e0")))
+            painter.drawRect(rect)
+
+            # 绘制已完成进度（红色填充）
+            progress_rect = rect.adjusted(0, 0, -int(rect.width() * (1 - progress / 100)), 0)
+            painter.setBrush(QBrush(QColor("#ff4444")))
+            painter.drawRect(progress_rect)
+
+            # 绘制百分比文本
+            painter.setPen(QColor("#333333"))
+            painter.drawText(option.rect, Qt.AlignCenter, f"{progress}%")
+            painter.restore()
+        else:
+            # 非进度列，走默认绘制
+            super().paint(painter, option, index)
+
+
+# ========== 2. 构建 Model，填充数据 ==========
+def build_task_model():
+    model = QStandardItemModel()
+    model.setHorizontalHeaderLabels(["任务名称", "负责人", "进度", "状态"])
+
+    tasks = [
+        ("需求分析", "张三", 100, "已完成"),
+        ("UI设计",   "李四", 80,  "进行中"),
+        ("后端开发", "王五", 45,  "进行中"),
+        ("测试验收", "赵六", 0,   "未开始"),
+    ]
+
+    for row_idx, (name, owner, progress, status) in enumerate(tasks):
+        # 每列创建一个 QStandardItem
+        item_name = QStandardItem(name)
+        item_owner = QStandardItem(owner)
+
+        # 进度列：仅作为占位，实际值通过 UserRole 传递给 Delegate
+        item_progress = QStandardItem()
+        item_progress.setData(progress, Qt.UserRole)
+
+        # 状态列：根据状态设置不同文字颜色
+        item_status = QStandardItem(status)
+        if status == "已完成":
+            item_status.setForeground(QBrush(QColor("#00aa00")))
+        elif status == "进行中":
+            item_status.setForeground(QBrush(QColor("#ff8800")))
+        else:
+            item_status.setForeground(QBrush(QColor("#999999")))
+
+        model.appendRow([item_name, item_owner, item_progress, item_status])
+
+    return model
+
+
+# ========== 3. 组装 View + Model + Delegate ==========
+class TaskTableView(QTableView):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Model/View 实战 - 任务管理表")
+        self.resize(600, 400)
+
+        # 绑定 Model
+        model = build_task_model()
+        self.setModel(model)
+
+        # 为进度列（第2列）安装自定义 Delegate
+        self.setItemDelegateForColumn(2, ProgressBarDelegate(self))
+
+        # 美化：列宽自适应、交替行色
+        self.horizontalHeader().setStretchLastSection(True)
+        self.setAlternatingRowColors(True)
+        self.setEditTriggers(QTableView.DoubleClicked)  # 双击编辑
+
+
+if __name__ == "__main__":
+    app = QApplication()
+    table = TaskTableView()
+    table.show()
+    app.exec()
+
+```
+
+**代码核心要点解析**：
+
+1. **Model 负责数据管理**：QStandardItemModel 封装任务数据，每个 QStandardItem 独立控制颜色、图标、编辑权限，数据逻辑集中管理；
+
+2. **View 负责展示**：QTableView 仅负责表格框架渲染、滚动条、选择高亮，不持有业务数据；
+
+3. **Delegate 负责自定义绘制**：ProgressBarDelegate 重写 `paint()` 方法，在进度列绘制可视化进度条，其余列走默认绘制逻辑，互不干扰；
+
+4. **数据角色灵活运用**：进度值通过 `Qt.UserRole` 自定义角色传递给 Delegate，状态颜色通过 `setForeground` 在 Model 层统一管控，体现了「数据驱动展示」的核心思想。
+
+##### 2\.7\.6 高级特性：多视图共享同一 Model（架构核心价值演示）
+
+Model/View 架构最核心的价值——一个 Model 驱动多个 View，数据编辑自动同步所有视图。以下为核心用法：
+
+```python
+from PySide6.QtWidgets import QTableView, QListView, QSplitter
+from PySide6.QtGui import QStandardItemModel
+
+# 创建一个共享 Model
+shared_model = QStandardItemModel()
+shared_model.setHorizontalHeaderLabels(["项目名称"])
+for name in ["模块A", "模块B", "模块C", "模块D"]:
+    shared_model.appendRow([QStandardItem(name)])
+
+# 视图1：表格视图展示
+table_view = QTableView()
+table_view.setModel(shared_model)
+
+# 视图2：列表视图展示同一数据
+list_view = QListView()
+list_view.setModel(shared_model)
+
+# 任意一处编辑数据，两个视图自动同步刷新
+# 例如：table_view.model().item(0, 0).setText("模块A-已修改")
+# → list_view 中第0项自动变为 "模块A-已修改"，无需手动刷新
+```
+
+**面试价值点**：多视图共享 Model 是企业级架构的核心能力——同一份数据，可同时以表格、列表、树形、图表等多种形态展示，用户在任意视图编辑数据，所有视图实时同步，数据一致性由 Model 层统一保障，无需开发者手动维护多视图同步逻辑。
+
+##### 2\.7\.7 自定义 Model 完整实战：对接任意数据源（企业进阶）
+
+当预置 Model 无法满足需求（超大数据量、特殊数据结构、网络/数据库数据源），需继承 QAbstractItemModel 自定义实现。以下为只读表格 Model 的最小完整实现：
+
+```python
+from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
+
+
+class CustomTableModel(QAbstractTableModel):
+    """自定义表格 Model，对接任意后端数据源"""
+
+    def __init__(self, data=None, headers=None, parent=None):
+        super().__init__(parent)
+        self._data = data or []        # 内部数据存储（可替换为网络/数据库数据源）
+        self._headers = headers or []
+
+    # ---- 必须重写的核心纯虚函数 ----
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._data)
+
+    def columnCount(self, parent=QModelIndex()):
+        return len(self._headers)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        row, col = index.row(), index.column()
+
+        if role == Qt.DisplayRole:
+            return str(self._data[row][col])     # 显示文本
+        elif role == Qt.TextAlignmentRole:
+            return Qt.AlignCenter                 # 全局居中对齐
+        elif role == Qt.BackgroundRole and row % 2 == 0:
+            return QBrush(QColor("#f7f7f7"))      # 交替行背景色
+        return None
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]         # 表头文本
+        return None
+
+    # ---- 数据变更方法（需手动通知 View）----
+    def add_row(self, row_data):
+        """新增一行数据，必须成对调用 beginInsertRows / endInsertRows"""
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+        self._data.append(row_data)
+        self.endInsertRows()
+
+    def update_cell(self, row, col, value):
+        """更新单元格数据，必须发射 dataChanged 信号"""
+        self._data[row][col] = value
+        index = self.index(row, col)
+        self.dataChanged.emit(index, index)       # 通知 View 刷新该单元格
+```
+
+**核心要点**：
+
+- 自定义 Model 只需重写 `rowCount`、`columnCount`、`data` 三个函数即可实现只读展示；
+
+- 需要编辑功能时，额外重写 `setData()`、`flags()`（开启 ItemIsEditable 权限）；
+
+- **数据增删改必须配对调用 `beginInsertRows/endInsertRows`、`beginRemoveRows/endRemoveRows`、`dataChanged` 信号**，否则 View 不会刷新，这是自定义 Model 最高频的工程坑点；
+
+- 内部 `_data` 可替换为任意后端数据源（数据库游标、网络缓存、Pandas DataFrame），Model 层做适配转换即可，View 层完全无感知。
+
+##### 2\.7\.8 Model/View 架构工程避坑要点（高频踩坑总结）
+
+- **坑点1：忘记发射 dataChanged 信号**：自定义 Model 修改数据后未通知 View，界面不刷新。**方案**：所有数据变更操作必须配对调用 begin/end 函数或发射 dataChanged 信号。
+
+- **坑点2：data\(\) 函数遗漏角色处理**：只处理了 DisplayRole，导致颜色、对齐、图标等样式全部失效。**方案**：根据业务需求完整处理 TextAlignmentRole、ForegroundRole、BackgroundRole、DecorationRole 等角色。
+
+- **坑点3：大数据量使用便利控件**：QTableWidget 加载万级数据严重卡顿。**方案**：切换为 QTableView \+ 自定义 Model，利用 Model 的按需拉取特性，View 只请求可见区域数据，实现虚拟滚动。
+
+- **坑点4：Delegate 编辑数据未写回 Model**：自定义 Delegate 编辑器获取新值后，未调用 `model.setData()`，导致编辑结果丢失。**方案**：Delegate 的 `setModelData()` 方法中必须将编辑器数据写回 Model。
+
+- **坑点5：多线程直接操作 Model**：子线程直接调用 Model 的增删改方法，违反 QObject 线程依附性，导致崩溃。**方案**：子线程通过队列信号槽通知主线程，由主线程操作 Model。
+
+##### 2\.7\.9 Model/View 架构面试标准总结话术
+
+Qt 采用 Model/View/Delegate 三组件架构实现数据与界面的解耦，是标准 MVC 模式的工程化变体。Model 负责数据管理与变更通知，View 负责界面渲染展示，Delegate 负责单元格级别的自定义绘制与编辑交互。相比 QListWidget 等便利控件，Model/View 架构支持海量数据高效渲染、多视图共享同一数据源、自定义数据源对接和精细化展示控制，是企业级中大型项目的标准数据展示方案。
+
+自定义 Model 需继承 QAbstractItemModel，重写 rowCount、columnCount、data 等核心虚函数，通过 data\(\) 函数的 ItemDataRole 角色体系统一管控文本、颜色、图标、对齐等全方位展示信息。数据变更时必须通过 dataChanged 信号和 begin/end 函数通知 View 刷新，保证界面与数据的一致性。实际开发中优先使用 QStandardItemModel 应对通用场景，超大数据量或特殊数据源时继承 QAbstractItemModel 自定义实现，结合自定义 Delegate 完成进度条、图标、富文本等高级单元格渲染。
+
+##### 2\.7\.10 Model/View 面试高频问答速查
+
+**Q：Qt 的 Model/View 和标准 MVC 有什么区别？**
+
+标准 MVC 是 Model\-View\-Controller 三件套，Controller 负责交互调度。Qt 精简了 Controller 层——用户交互由 Qt 事件系统处理，数据编辑由 Delegate 负责，形成了 Model\-View\-Delegate 三组件架构。Delegate 是 Qt 独有设计，负责单元格级别的自定义绘制和编辑交互，比标准 MVC 更贴合 GUI 开发实际需求。
+
+**Q：QTableWidget 和 QTableView 怎么选？**
+
+QTableWidget 是便利控件，控件内部自带数据存储，适合少量数据、快速开发；QTableView 是 Model/View 架构的视图组件，不持有数据，需搭配 Model 使用，适合海量数据、多视图共享、复杂数据操作场景。数据量超过千行或需要多视图同步时，必须切换到 QTableView \+ Model。
+
+**Q：自定义 Model 最大的坑是什么？**
+
+数据变更后忘记通知 View。自定义 Model 修改内部数据后，必须配对调用 beginInsertRows/endInsertRows（增行）、beginRemoveRows/endRemoveRows（删行）、发射 dataChanged 信号（改数据），否则 View 不会刷新，界面数据与 Model 数据不一致。
+
+**Q：一个 Model 能绑定多个 View 吗？**
+
+可以，这是 Model/View 架构的核心价值。一个 Model 可同时绑定 QTableView、QListView、QTreeView 等多个 View，任意一处编辑数据，Model 发射 dataChanged 信号，所有关联 View 自动同步刷新，无需手动维护多视图一致性。
+
 ### 3 模块二：Qt跨平台开发与打包部署规范（企业刚需）
 
 Qt核心优势为一次编码、多端运行，企业岗位刚需掌握**Windows/Linux/macOS三端适配、依赖处理、打包发布、兼容排查**全流程能力。
@@ -1063,6 +1457,14 @@ UI控件与QObject依附创建线程，跨线程直接调用不安全。队列�
 
 事件循环是底层驱动基石，信号槽是上层业务封装。事件循环捕获分发系统事件，触发控件原生交互事件，进而发射信号、执行槽函数，信号槽完全依赖事件循环驱动，无事件循环则无信号调度。
 
+**Q10：简述Qt Model/View架构及与标准MVC的区别？**
+
+Qt采用Model/View/Delegate三组件架构，是标准MVC的工程化变体。Model管理数据并通过dataChanged等信号通知视图刷新，View负责界面渲染展示，Delegate负责单元格级别的自定义绘制与编辑交互。相比标准MVC，Qt精简了Controller层——用户交互由事件系统处理，数据编辑交给Delegate，更贴合GUI开发实际需求。相比QListWidget等便利控件，Model/View支持海量数据高效渲染、多视图共享同一数据源、自定义数据源对接，是企业级项目的标准方案。
+
+**Q11：自定义Model最大的工程坑点是什么？**
+
+数据变更后忘记通知View刷新。自定义Model修改内部数据后，必须配对调用beginInsertRows/endInsertRows（增行）、beginRemoveRows/endRemoveRows（删行）、发射dataChanged信号（改数据），否则View不会自动刷新，界面与数据不一致。此外data()函数需完整处理DisplayRole、ForegroundRole、BackgroundRole、TextAlignmentRole等角色，否则样式全部失效。
+
 ### 4\.4 工程化与跨平台类
 
 **Q8：Qt跨平台的核心原理？**
@@ -1086,6 +1488,8 @@ UI控件与QObject依附创建线程，跨线程直接调用不安全。队列�
 - ✅ 熟练掌握跨线程通信安全规则、四种信号槽连接模式、异步任务标准写法；
 
 - ✅ 熟练解决PyQt高频闪退、卡顿、内存泄漏、信号残留等工程问题；
+
+- ✅ 掌握Qt Model/View架构原理，理解Model\-View\-Delegate三组件职责，熟练使用QStandardItemModel与自定义Model，掌握多视图共享数据源、自定义Delegate绘制等核心能力；
 
 - ✅ 掌握Qt跨平台适配、三端打包部署、兼容问题排查流程；
 
