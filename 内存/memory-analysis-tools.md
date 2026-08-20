@@ -75,6 +75,33 @@ Direct leak of 40 byte(s) in 1 object(s) allocated from:
 
 > **优缺点**：开销约 2-3 倍内存和 CPU，速度快；但不能检测栈内存越界读（需配合 `-fsanitize=undefined`）。
 
+#### Windows 平台支持 ✅
+
+ASan/LSan 在 Windows 上**原生可用**，有两种编译器路径：
+
+**MSVC（Visual Studio 2019 16.9+）**：
+
+```powershell
+# 启用 AddressSanitizer（自动包含 LeakSanitizer）
+cl /fsanitize=address /Zi /Od main.cpp /link /DEBUG
+
+# 单独启用 LeakSanitizer（较新 MSVC 版本支持）
+cl /fsanitize=leak /Zi main.cpp
+```
+
+项目属性方式：配置属性 → C/C++ → 常规 → **启用地址消毒器(AddressSanitizer)** = 是。
+
+**Clang-cl / LLVM MinGW**：
+
+```powershell
+clang-cl -fsanitize=address -g -O1 main.cpp -o main.exe
+```
+
+**注意事项**：
+- MSVC 下 LSan 默认在程序退出时自动运行泄漏检查，行为与原生 Linux 一致
+- UBSan（未定义行为检测）在 MSVC 上不完整，建议用 Clang-cl 补充
+- 编译时需关闭增量链接 `/INCREMENTAL:NO`，否则可能冲突
+
 ---
 
 ### 2. Valgrind (Memcheck)
@@ -113,6 +140,32 @@ valgrind --tool=memcheck --xml=yes --xml-file=valgrind_report.xml ./main
 
 > **注意**：Valgrind 运行速度慢 10-50 倍，不适合大负载程序，适合单元测试级别验证。
 
+#### Windows 平台支持 ❌
+
+Valgrind **不支持 Windows**。官方仅支持 Linux / macOS / Solaris / Android，无 Windows 端口，也没有稳定的第三方移植。
+
+**Windows 替代方案**：
+
+| 替代工具 | 能力定位 | 使用方式 |
+|---|---|---|
+| **Dr. Memory** | 最接近 Valgrind Memcheck 的动态插桩工具 | `drmemory.exe -- ./myapp.exe` |
+| **Visual Studio CRT Debug Heap** | MSVC 内置泄漏检测 | 见下方代码 |
+| **Deleaker** | 商业工具，深度泄漏分析 | IDE 插件一键运行 |
+
+```cpp
+// MSVC CRT Debug Heap 示例（无需额外安装）
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#include <stdlib.h>
+
+int main() {
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    // ... 业务代码 ...
+    _CrtDumpMemoryLeaks();  // 程序退出时自动打印泄漏报告
+    return 0;
+}
+```
+
 ---
 
 ### 3. Heaptrack
@@ -148,6 +201,18 @@ heaptrack --analyze heaptrack.my_server.12345.gz
 # 生成火焰图（需 heaptrack_gui 或导出到 hotspot）
 heaptrack_gui heaptrack.my_server.12345.gz
 ```
+
+#### Windows 平台支持 ❌
+
+Heaptrack **不支持 Windows**。它依赖 Linux 的 `LD_PRELOAD` 机制拦截 `malloc/free` 并配合 `ptrace/perf` 获取调用栈，Windows 的 PE 加载模型无法提供等效能力。
+
+**Windows 替代方案**：
+
+| 替代工具 | 能力定位 | 使用方式 |
+|---|---|---|
+| **MTuner** | 功能最接近 Heaptrack，支持火焰图、快照对比 | 独立 GUI，attach 到进程或启动新进程 |
+| **SciTech MemProfiler** | 支持托管+原生混合分析 | 商业工具，安装后一键 profile |
+| **Visual Studio 诊断工具** | 内存快照对比，看分配热区 | 调试 → 诊断工具 → 内存使用率 → 拍摄快照 |
 
 ---
 
@@ -193,15 +258,63 @@ pprof --text --base /tmp/myapp.hprof.0001.heap /tmp/myapp.hprof.0005.heap
 | `HEAP_PROFILE_ALLOCATION_INTERVAL` | 每分配多少字节采样一次（默认 1GB） |
 | `HEAP_PROFILE_INUSE_INTERVAL` | 堆使用量增长多少时 dump |
 
+#### Windows 平台支持 ⚠️ 部分支持
+
+gperftools 在 Windows 上**分配器可用，但堆分析器不可用**：
+
+- ✅ **tcmalloc 分配器**：可通过 MSVC 工程编译使用，源码自带 `vsprojects/gperftools.sln`，编译后替换系统 malloc 即可提速并降低碎片
+- ❌ **Heap Profiler（`HEAPPROFILE=...`）**：官方 README 明确声明——*"The heap profiler is available on all unix-based systems… It is not currently available on Windows"*
+- ❌ **Heap Checker**：同样仅限 Unix-like 系统
+
+**MSVC 编译 tcmalloc（仅分配器）**：
+
+```powershell
+# 1. 用 VS 打开 vsprojects/gperftools.sln 编译生成 libtcmalloc_minimal.lib
+# 2. 项目中链接该 lib，或在代码入口设置钩子：
+```
+
+```cpp
+// 方式：链接 tcmalloc_minimal.lib 后，malloc/free 自动被替换
+// 无需修改代码，仅替换 CRT 默认分配器
+#pragma comment(lib, "libtcmalloc_minimal.lib")
+```
+
+> **注意**：社区有非官方 gperftools-win32 分支尝试移植 heap profiler，但栈回溯不准确、存在稳定性问题，**不建议生产环境使用**。
+
 ---
 
-### 5. Windows 平台工具
+### 5. Windows 平台工具总览
+
+#### 四大工具 Windows 支持矩阵
+
+| 工具 | Windows 支持 | 说明 |
+|---|---|---|
+| **AddressSanitizer + LeakSanitizer** | ✅ 原生支持 | MSVC 2019 16.9+ 用 `/fsanitize=address`；Clang-cl / MinGW-w64 用 `-fsanitize=address` |
+| **Valgrind (Memcheck)** | ❌ 不支持 | 官方仅支持 Linux/macOS/Solaris/Android，无 Windows 端口 |
+| **Heaptrack** | ❌ 不支持 | 依赖 `LD_PRELOAD` + `ptrace/perf`，Windows PE 模型无法等效 |
+| **gperftools** | ⚠️ 部分支持 | tcmalloc 分配器可经 MSVC 编译使用；heap profiler / heap checker 官方明确不支持 Windows |
+
+#### Windows 原生替代工具
 
 | 工具 | 适用场景 | 使用方式 |
 |---|---|---|
-| **Dr. Memory** | 类似 Valgrind 的 Windows 内存检查器 | `drmemory.exe -- ./myapp.exe` |
-| **Visual Studio 诊断** | 调试时自动检测泄漏 | 调试 → 诊断工具 → 内存使用率 |
-| **VLD (Visual Leak Detector)** | 开源泄漏检测库 | `#include <vld.h>`，编译运行后自动报告 |
+| **Dr. Memory** | 最接近 Valgrind 的动态插桩内存检查器 | `drmemory.exe -- ./myapp.exe` |
+| **Visual Studio CRT Debug Heap** | MSVC 内置泄漏检测，零依赖 | `#define _CRTDBG_MAP_ALLOC` + `_CrtSetDbgFlag` |
+| **VLD (Visual Leak Detector)** | 开源泄漏检测库，使用简单 | `#include <vld.h>`，运行后自动报告 |
+| **Deleaker** | 商业工具，深度泄漏分析 + IDE 集成 | VS / RAD Studio 插件，一键运行 |
+| **MTuner** | 最接近 Heaptrack 的分配分析器，带火焰图 | 独立 GUI，attach 进程或启动新进程 |
+| **Visual Studio 诊断工具** | 调试时实时内存监控 + 快照对比 | 调试 → 诊断工具 → 内存使用率 → 拍摄快照 |
+
+#### Windows 下推荐组合
+
+```
+开发阶段（CI 集成）：  AddressSanitizer + LeakSanitizer  →  MSVC /fsanitize=address
+本地深度调试：         Dr. Memory / Deleaker              →  动态插桩，精确定位
+分配热区分析：         MTuner                              →  火焰图 + 快照对比
+轻量线上替换：         tcmalloc（仅分配器，无 profiler）    →  降低碎片、提升吞吐
+```
+
+> **提示**：如果你的项目需要跨平台（Linux + Windows 同时维护），建议优先选用 **AddressSanitizer**（两端均支持）作为统一的内存检测方案，减少工具链分裂成本。
 
 ---
 
