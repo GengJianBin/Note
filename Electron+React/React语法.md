@@ -77,7 +77,10 @@ const timerRef = useRef<number | null>(null);
 
 ### 2. 副作用 / 生命周期类 Hook
 #### useEffect
+本质：在“渲染完成后”，根据依赖变化，执行副作用。
+
 处理副作用：请求接口、订阅事件、定时器、DOM操作。
+
 模拟类组件 `componentDidMount / componentDidUpdate / componentWillUnmount`。
 ```tsx
 useEffect(() => {
